@@ -41,8 +41,13 @@ class SeleniumTicketBot:
         ]
         options.add_argument(f'--user-agent={random.choice(user_agents)}')
         
-        service = Service('./chromedriver_mac')
-        self.driver = webdriver.Chrome(service=service, options=options)
+        try:
+            # 尝试新版本API
+            service = Service('./chromedriver_mac')
+            self.driver = webdriver.Chrome(service=service, options=options)
+        except TypeError:
+            # 兼容旧版本API
+            self.driver = webdriver.Chrome(executable_path='./chromedriver_mac', options=options)
         self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
     def login(self):
@@ -88,6 +93,14 @@ class SeleniumTicketBot:
     def check_ticket_status(self):
         """检查票务状态"""
         try:
+            # 检查浏览器是否还在运行
+            try:
+                self.driver.current_url
+            except:
+                print("❌ 浏览器窗口已关闭，重新启动...")
+                self.setup_driver()
+                return 'restart'
+            
             # 访问商品页面
             url = f'https://detail.damai.cn/item.htm?id={self.item_id}'
             self.driver.get(url)
@@ -96,7 +109,11 @@ class SeleniumTicketBot:
             time.sleep(3)
             
             # 查找购买按钮
-            buy_buttons = self.driver.find_elements(By.XPATH, "//button[contains(text(), '立即购买') or contains(text(), '即将开抢') or contains(text(), '缺货登记')]")
+            try:
+                buy_buttons = self.driver.find_elements(By.XPATH, "//button[contains(text(), '立即购买') or contains(text(), '即将开抢') or contains(text(), '缺货登记')]")
+            except:
+                # 兼容旧版本API
+                buy_buttons = self.driver.find_elements_by_xpath("//button[contains(text(), '立即购买') or contains(text(), '即将开抢') or contains(text(), '缺货登记')]")
             
             if buy_buttons:
                 button_text = buy_buttons[0].text
@@ -121,24 +138,42 @@ class SeleniumTicketBot:
             print("🚀 开始抢票...")
             
             # 点击立即购买
-            buy_button = WebDriverWait(self.driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), '立即购买')]"))
-            )
+            try:
+                buy_button = WebDriverWait(self.driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), '立即购买')]"))
+                )
+            except:
+                # 兼容旧版本API
+                buy_button = WebDriverWait(self.driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), '立即购买')]"))
+                )
             buy_button.click()
             
             # 等待确认页面
             time.sleep(2)
             
             # 选择观影人
-            viewer_checkbox = WebDriverWait(self.driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, f"//label[contains(text(), '{self.viewer[0]}')]"))
-            )
+            try:
+                viewer_checkbox = WebDriverWait(self.driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, f"//label[contains(text(), '{self.viewer[0]}')]"))
+                )
+            except:
+                # 兼容旧版本API
+                viewer_checkbox = WebDriverWait(self.driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, f"//label[contains(text(), '{self.viewer[0]}')]"))
+                )
             viewer_checkbox.click()
             
             # 提交订单
-            submit_button = WebDriverWait(self.driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), '提交订单')]"))
-            )
+            try:
+                submit_button = WebDriverWait(self.driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), '提交订单')]"))
+                )
+            except:
+                # 兼容旧版本API
+                submit_button = WebDriverWait(self.driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), '提交订单')]"))
+                )
             submit_button.click()
             
             print("🎉 抢票成功！")
@@ -167,6 +202,10 @@ class SeleniumTicketBot:
                     print("❌ 票已售罄")
                     self.is_running = False
                     break
+                elif status == 'restart':
+                    print("🔄 重新启动浏览器...")
+                    time.sleep(5)
+                    continue
                 else:
                     print(f"❓ 未知状态: {status}")
                 
