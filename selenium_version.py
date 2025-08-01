@@ -16,13 +16,14 @@ from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 class SeleniumTicketBot:
-    def __init__(self):
+    def __init__(self, refresh_interval=0.5):
         self.driver = None
         self.is_running = False
         self.item_id = 954702452111  # 商品ID
         self.ticket_price = 180  # 票价
         self.buy_nums = 1  # 购买数量
         self.viewer = ['王博弘']  # 观影人
+        self.refresh_interval = refresh_interval  # 刷新间隔（秒）
         
     def setup_driver(self):
         """设置Chrome驱动"""
@@ -177,6 +178,8 @@ class SeleniumTicketBot:
             submit_button.click()
             
             print("🎉 抢票成功！")
+            print("💳 请在浏览器中完成支付，您有15分钟时间！")
+            print("⏰ 支付倒计时开始...")
             return True
             
         except Exception as e:
@@ -209,8 +212,8 @@ class SeleniumTicketBot:
                 else:
                     print(f"❓ 未知状态: {status}")
                 
-                # 随机延迟
-                time.sleep(random.uniform(1, 3))
+                # 使用配置的刷新频率
+                time.sleep(self.refresh_interval)
                 
             except Exception as e:
                 print(f"❌ 监控异常: {e}")
@@ -235,5 +238,13 @@ class SeleniumTicketBot:
                 self.driver.quit()
 
 if __name__ == '__main__':
-    bot = SeleniumTicketBot()
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='大麦网Selenium抢票工具')
+    parser.add_argument('--refresh', type=float, default=0.5, 
+                       help='刷新间隔（秒），默认0.5秒，建议0.3-1秒')
+    args = parser.parse_args()
+    
+    print(f"⚡ 刷新频率: {args.refresh}秒")
+    bot = SeleniumTicketBot(refresh_interval=args.refresh)
     bot.run() 
